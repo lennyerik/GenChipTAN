@@ -1,0 +1,7 @@
+# Possible build directories
+cmake-build-debug/
+cmake-build-release/
+build/
+
+# CLion
+.idea/
