@@ -1,24 +1,6 @@
 #include "ChipTAN.h"
+#include "Graphics.h"
 #include <iostream>
-#include <iomanip>
-#ifdef COMPILE_WITH_CLI_GRAPHICS
-#include <qrencode.h>
-#include <ncurses.h>
-#endif
-
-void print_bytes_stdout(const uint8_t bytes[], size_t size) {
-    for (size_t i = 0; i < size; i++) {
-        std::cout << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(bytes[i]) << ' ';
-    }
-    std::cout << '\n';
-}
-
-void print_bytes_ncurses(const uint8_t bytes[], size_t size) {
-    for (size_t i = 0; i < size; i++) {
-        printw("%02x ", bytes[i]);
-    }
-    printw("\n");
-}
 
 int main() {
     std::cout << "==========================" << '\n'
@@ -61,26 +43,10 @@ int main() {
     auto bqr = new uint8_t[bqr_size];
     chipTAN::generate_bqr_data(HHDuc, HHDuc_size, bqr);
 
-#ifdef COMPILE_WITH_CLI_GRAPHICS
-    initscr();
-    printw("HHDuc: ");
-    print_bytes_ncurses(HHDuc, HHDuc_size);
-    printw("BQR:   ");
-    print_bytes_ncurses(bqr, bqr_size);
-    printw("\nPress any key to exit.");
-    refresh();
-    getch();
-    endwin();
-#else
-    std::cout << "HHDuc: ";
-    print_bytes_stdout(HHDuc, HHDuc_size);
+    graphics::graphics_loop(bqr, bqr_size, HHDuc, HHDuc_size);
 
-    std::cout << "BQR:   ";
-    print_bytes_stdout(bqr, bqr_size);
-#endif
-
-    delete []bqr;
-    delete []HHDuc;
+    delete[]bqr;
+    delete[]HHDuc;
 
     return 0;
 }

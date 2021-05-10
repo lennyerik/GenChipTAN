@@ -2,6 +2,7 @@
 #include <algorithm>
 
 #define CRCPP_USE_CPP11
+
 #include "CRC.h"
 
 
@@ -26,8 +27,8 @@ constexpr uint8_t q(uint32_t n) {
 }
 
 void
-chipTAN::generate_HHDuc(const std::string& startcode, const std::string& DE1, const std::string& DE2, const
-std::string& DE3, uint8_t out[]) {
+chipTAN::generate_HHDuc(const std::string &startcode, const std::string &DE1, const std::string &DE2, const
+std::string &DE3, uint8_t out[]) {
     if (startcode.empty()) throw std::invalid_argument("The startcode must not be empty");
     if (startcode.size() > 0b00111111) throw std::length_error("Startcode length must not be greater than 0b00111111");
 
@@ -53,7 +54,7 @@ std::string& DE3, uint8_t out[]) {
     add_to_luhnsum(&out[3], startcode.size());
 
     // Data
-    auto maybe_append_DE = [&current_pos, add_to_luhnsum](const std::string& DE) {
+    auto maybe_append_DE = [&current_pos, add_to_luhnsum](const std::string &DE) {
         if (!DE.empty()) {
             if (DE.size() > 0b01111111) {
                 throw std::length_error("Length of a data entry (DE) must not be bigger than 0b01111111");
