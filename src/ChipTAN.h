@@ -7,17 +7,8 @@
 namespace chipTAN {
 
     // HHDuc
-    constexpr uint16_t HHDuc_size(const std::string &startcode, const std::string &DE1, const std::string &DE2, const
-    std::string &DE3) {
-        size_t size = 4 + startcode.size();
-        size += DE1.empty() ? 0 : (DE1.size() + 1);
-        size += DE2.empty() ? 0 : (DE2.size() + 1);
-        size += DE3.empty() ? 0 : (DE3.size() + 1);
-
-        if (size > 256) throw std::length_error("The total size of the HHDuc must not exceed 256 bytes");
-
-        return static_cast<uint16_t>(size);
-    }
+    uint16_t HHDuc_size(const std::string &startcode, const std::string &DE1, const std::string &DE2, const
+    std::string &DE3);
 
     void generate_HHDuc(const std::string &startcode, const std::string &DE1, const std::string &DE2, const
     std::string &DE3, uint8_t out[]);
