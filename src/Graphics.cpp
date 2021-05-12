@@ -1,7 +1,8 @@
 #include "Graphics.h"
 #include <iomanip>
-#include <chrono>
 #include <future>
+
+using namespace graphics;
 
 void draw_bytes(const uint8_t bytes[], const size_t size, const char *end = "\n") {
     for (size_t i = 0; i < size; i++) {
@@ -13,7 +14,7 @@ void draw_bytes(const uint8_t bytes[], const size_t size, const char *end = "\n"
 
 // Helper function for drawing single bits on the screen (black or white pixels)
 void draw_pixel(bool v) {
-    const int col = COLOR_PAIR(v ? graphics::Colour::logical_white : graphics::Colour::logical_black);
+    const int col = COLOR_PAIR(v ? ColourCode::logical_white : ColourCode::logical_black);
     attron(col);
 
     // Add two blocks to make a square pixel
@@ -32,54 +33,58 @@ void draw_line(int x) {
 }
 
 void draw_HHDuc(const uint8_t HHDuc[], const uint16_t HDDuc_size) {
-    attron(COLOR_PAIR(graphics::Colour::data));
+    attron(COLOR_PAIR(ColourCode::data));
     draw_bytes(HHDuc, HDDuc_size);
-    attroff(COLOR_PAIR(graphics::Colour::data));
+    attroff(COLOR_PAIR(ColourCode::data));
 }
 
 void draw_bqr(const uint8_t bqr[], uint16_t bqr_size) {
-    auto print_with_colour = [bqr, bqr_size](int colour, size_t at, size_t size, bool end = false) {
+    auto print_with_colour = [bqr](int colour, size_t at, size_t size, bool end = false) {
         attron(COLOR_PAIR(colour));
         draw_bytes(&bqr[at], size, end ? "\n" : "");
         attroff(COLOR_PAIR(colour));
     };
 
-    print_with_colour(graphics::Colour::magic, 0, 2);
-    print_with_colour(graphics::Colour::ams, 2, 1);
+    print_with_colour(ColourCode::magic, 0, 2);
+    print_with_colour(ColourCode::ams, 2, 1);
     const auto data_size = static_cast<uint16_t>(bqr_size - 4);
-    print_with_colour(graphics::Colour::data, 2, data_size);
-    print_with_colour(graphics::Colour::checksum, static_cast<size_t>(3 + data_size - 1), 2, true);
+    print_with_colour(ColourCode::data, 2, data_size);
+    print_with_colour(ColourCode::checksum, static_cast<size_t>(3 + data_size - 1), 2, true);
 }
 
 void draw_qrcode(const QRcode *qr, int max_w, int max_h) {
-    constexpr int margin_size = 4;
     const int w = qr->width;
 
     // We need to divide by 2 for the maximum width, since each pixel is two characters big (horizontally)
-    if ((w + margin_size * 2) + 1 > max_w / 2 || w + margin_size * 2 > max_h) {
+    if ((w + settings::qr_margin_size * 2) + 1 > max_w / 2 || w + settings::qr_margin_size * 2 > max_h) {
         printw("Cannot display chipTAN QR code because the window is too small.\n");
         return;
     }
 
+    if (!has_colors()) {
+        printw("Cannot display chipTAN QR code because the terminal does not support colours.\n");
+        return;
+    }
+
     // Top border
-    for (int i = 0; i < margin_size; i++) {
-        draw_line(w + margin_size * 2);
+    for (int i = 0; i < settings::qr_margin_size; i++) {
+        draw_line(w + settings::qr_margin_size * 2);
     }
 
     for (int i = 0; i < w; i++) {
         // Left border
-        for (int j = 0; j < margin_size; j++) {
+        for (int j = 0; j < settings::qr_margin_size; j++) {
             draw_pixel(true);
         }
 
         // Data
         for (int j = 0; j < w; j++) {
             // libqrencode gives us a 1 in the least significant bit if the segment is black
-            draw_pixel(!static_cast<bool>(qr->data[(i*w)+j] & 1));
+            draw_pixel(!static_cast<bool>(qr->data[(i * w) + j] & 1));
         }
 
         // Right border
-        for (int j = 0; j < margin_size; j++) {
+        for (int j = 0; j < settings::qr_margin_size; j++) {
             draw_pixel(true);
         }
 
@@ -87,14 +92,19 @@ void draw_qrcode(const QRcode *qr, int max_w, int max_h) {
     }
 
     // Bottom border
-    for (int i = 0; i < margin_size; i++) {
-        draw_line(w + margin_size * 2);
+    for (int i = 0; i < settings::qr_margin_size; i++) {
+        draw_line(w + settings::qr_margin_size * 2);
     }
 }
 
 void draw_flicker_code(bool clock, const uint8_t half_byte) {
-    constexpr uint8_t width = 5*3;
-    constexpr uint8_t height = 5;
+    constexpr uint8_t width = settings::flicker_code_segment_width * 5;
+    constexpr uint8_t height = settings::flicker_code_segment_height;
+
+    if (!has_colors()) {
+        printw("Cannot display optical chipTAN flicker code because the terminal does not support colours.\n");
+        return;
+    }
 
     // Top border
     draw_line(width + 2);
@@ -105,7 +115,7 @@ void draw_flicker_code(bool clock, const uint8_t half_byte) {
 
         // Data
         for (uint8_t j = 0; j < width; j++) {
-            uint8_t field_idx = j / 3;
+            uint8_t field_idx = j / settings::flicker_code_segment_width;
             if (field_idx == 0) {
                 // The first field is the clock bit
                 draw_pixel(clock);
@@ -125,14 +135,14 @@ void draw_flicker_code(bool clock, const uint8_t half_byte) {
 }
 
 void init_colours() {
-    init_pair(graphics::Colour::magic, COLOR_RED, COLOR_BLACK);
-    init_pair(graphics::Colour::ams, COLOR_GREEN, COLOR_BLACK);
-    init_pair(graphics::Colour::data, COLOR_YELLOW, COLOR_BLACK);
-    init_pair(graphics::Colour::checksum, COLOR_BLUE, COLOR_BLACK);
+    init_pair(ColourCode::magic, settings::magic_colour, COLOR_BLACK);
+    init_pair(ColourCode::ams, settings::ams_colour, COLOR_BLACK);
+    init_pair(ColourCode::data, settings::data_colour, COLOR_BLACK);
+    init_pair(ColourCode::checksum, settings::checksum_colour, COLOR_BLACK);
 
     // These are inverted since we print spaces with a specific background colour
-    init_pair(graphics::Colour::logical_white, COLOR_BLACK, COLOR_WHITE);
-    init_pair(graphics::Colour::logical_black, COLOR_BLACK, COLOR_BLACK);
+    init_pair(ColourCode::logical_white, COLOR_BLACK, settings::logical_white);
+    init_pair(ColourCode::logical_black, COLOR_BLACK, settings::logical_black);
 }
 
 void graphics::graphics_loop(const uint8_t bqr[], const uint16_t bqr_size, const uint8_t HHDuc[], const uint16_t
@@ -152,17 +162,16 @@ HHDuc_size) {
     int prev_win_w = 0, prev_win_h = 0;
 
     // The optical chipTAN readers require this start code at the beginning of each new transmission cycle
-    constexpr uint8_t start_bytes_flicker_code[] = { 0x0F, 0xFF };
+    constexpr uint8_t start_bytes_flicker_code[] = {0x0F, 0xFF};
 
-    constexpr auto flicker_code_delay = std::chrono::milliseconds(50);
-    int flicker_code_x, flicker_code_y;
+    int flicker_code_x = 0, flicker_code_y = 0;
 
     uint16_t byte_idx = 0;
     bool clock = true;
     bool lsb = true;  // Flicker codes transmit LSB first
 
     const auto key_pressed_future = std::async(std::launch::async, &getch);
-    while (key_pressed_future.wait_for(flicker_code_delay) == std::future_status::timeout) {
+    while (key_pressed_future.wait_for(settings::flicker_code_delay) == std::future_status::timeout) {
         // Check if the window dimensions have changed
         // If so, clear the terminal and redraw all static content
         int win_h, win_w;
@@ -203,7 +212,7 @@ HHDuc_size) {
 
         // Flicker codes display each half byte for one complete clock cycle (on & off again) before transmitting the
         // next one
-        draw_flicker_code(clock, lsb ? byte & 0xF : byte >> 4);
+        draw_flicker_code(clock, lsb ? static_cast<uint8_t>(byte & 0xF) : static_cast<uint8_t>(byte >> 4));
         if (!clock) {
             if (!lsb && ++byte_idx - 2 >= HHDuc_size) byte_idx = 0;
             lsb = !lsb;

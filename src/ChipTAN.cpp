@@ -46,7 +46,6 @@ std::string &DE3, uint8_t out[]) {
     constexpr uint8_t control_byte = 1;
 
     out[0] = static_cast<uint8_t>(size - 1);  // LC
-    // TODO: Change 0b11 to 0b10 (?)
     out[1] = static_cast<uint8_t>(startcode.size() | (0b11 << 6));  // LS
     out[2] = control_byte;  // Control byte
     add_to_luhnsum(&control_byte, 1);
