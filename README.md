@@ -1,4 +1,4 @@
-#GenChipTAN
+# GenChipTAN
 
 The [chipTAN](https://en.wikipedia.org/wiki/Transaction_authentication_number#ChipTAN_/_Sm@rt-TAN_/_CardTAN) system is
 used by German banks for authenticating online banking transactions.
