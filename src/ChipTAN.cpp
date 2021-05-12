@@ -1,9 +1,7 @@
 #include "ChipTAN.h"
+
 #include <algorithm>
-
-#define CRCPP_USE_CPP11
-
-#include "CRC.h"
+#include "CRC16.h"
 
 
 // HHDuc
@@ -101,7 +99,7 @@ void chipTAN::generate_bqr_data(const uint8_t HHDuc[], const uint16_t HHDuc_size
     std::copy_n(HHDuc, HHDuc_size, &out[3]);
 
     // Checksum
-    uint16_t checksum = CRC::Calculate(out, size - 2, CRC::CRC_16_ARC());
+    const uint16_t checksum = crc_16(out, size - 2);
     out[size - 2] = static_cast<uint8_t>(checksum >> 8);
     out[size - 1] = static_cast<uint8_t>(checksum & 0xFF);
 

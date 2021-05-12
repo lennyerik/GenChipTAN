@@ -7,9 +7,9 @@ add_executable(GenChipTAN
         src/main.cpp
         src/ChipTAN.cpp
         src/ChipTAN.h
-        src/CRC.h
         src/Graphics.cpp
         src/Graphics.h
+        src/CRC16.h
         )
 
 # Threading

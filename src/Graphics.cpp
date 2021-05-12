@@ -1,4 +1,5 @@
 #include "Graphics.h"
+
 #include <iomanip>
 #include <future>
 
@@ -52,7 +53,7 @@ void draw_bqr(const uint8_t bqr[], uint16_t bqr_size) {
     print_with_colour(ColourCode::checksum, static_cast<size_t>(3 + data_size - 1), 2, true);
 }
 
-void draw_qrcode(const QRcode *qr, int max_w, int max_h) {
+void draw_qrcode(QRcode *qr, int max_w, int max_h) {
     const int w = qr->width;
 
     // We need to divide by 2 for the maximum width, since each pixel is two characters big (horizontally)
