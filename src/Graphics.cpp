@@ -137,27 +137,30 @@ void init_colours() {
 
 void graphics::graphics_loop(const uint8_t bqr[], const uint16_t bqr_size, const uint8_t HHDuc[], const uint16_t
 HHDuc_size) {
-    WINDOW *window = initscr();
+    const WINDOW *window = initscr();
     noecho();
     curs_set(0);
 
-    const QRcode *bqr_code = QRcode_encodeData(bqr_size, bqr, 0, QR_ECLEVEL_L);
+    QRcode *bqr_code = QRcode_encodeData(bqr_size, bqr, 0, QR_ECLEVEL_L);
 
     if (has_colors()) {
         start_color();
         init_colours();
     }
 
-    constexpr uint8_t start_bytes_flicker_code[] = { 0xF0, 0xFF };
-
-    // Set the window dimensions to 0 so that the static content is drawn the first time
+    // Set the previous window dimensions to 0 so that the static content is drawn the first time
     int prev_win_w = 0, prev_win_h = 0;
 
+    // The optical chipTAN readers require this start code at the beginning of each new transmission cycle
+    constexpr uint8_t start_bytes_flicker_code[] = { 0x0F, 0xFF };
+
+    constexpr auto flicker_code_delay = std::chrono::milliseconds(50);
     int flicker_code_x, flicker_code_y;
 
     uint16_t byte_idx = 0;
-    bool first_half = true;
-    constexpr auto flicker_code_delay = std::chrono::milliseconds(200);
+    bool clock = true;
+    bool lsb = true;  // Flicker codes transmit LSB first
+
     const auto key_pressed_future = std::async(std::launch::async, &getch);
     while (key_pressed_future.wait_for(flicker_code_delay) == std::future_status::timeout) {
         // Check if the window dimensions have changed
@@ -190,15 +193,24 @@ HHDuc_size) {
 
         move(flicker_code_y, flicker_code_x);
 
-        if (byte_idx > 2) {
-            draw_flicker_code(first_half, first_half ? start_bytes_flicker_code[byte_idx - 2] : start_bytes_flicker_code[byte_idx - 2] >> 4);
+        // For the first two byte indexes, display the starting code, after that use the HHDuc
+        uint8_t byte;
+        if (byte_idx < 2) {
+            byte = start_bytes_flicker_code[byte_idx];
         } else {
-            draw_flicker_code(first_half, first_half ? HHDuc[byte_idx - 2] : HHDuc[byte_idx - 2] >> 4);
+            byte = HHDuc[byte_idx - 2];
         }
-        if (!first_half && (++byte_idx - 2) >= HHDuc_size) byte_idx = 0;
-        first_half = !first_half;
 
-        printw("%d %d \n", byte_idx, first_half);
+        // Flicker codes display each half byte for one complete clock cycle (on & off again) before transmitting the
+        // next one
+        draw_flicker_code(clock, lsb ? byte & 0xF : byte >> 4);
+        if (!clock) {
+            if (!lsb && ++byte_idx - 2 >= HHDuc_size) byte_idx = 0;
+            lsb = !lsb;
+        }
+        clock = !clock;
+
+        addch('\n');
 
         if (redraw) {
             [[maybe_unused]] int curr_x;
@@ -212,5 +224,6 @@ HHDuc_size) {
         refresh();
     }
 
+    QRcode_free(bqr_code);
     endwin();
 }
